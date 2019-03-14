@@ -146,24 +146,24 @@ module datapath(
 			colour_out <= 3'b000;
 	end
 	
-	assign LEDR[0] = direction_y;
-	assign LEDR[1] = direction_x;
+	assign LEDR = x_out;
 	
 	always@(posedge mv_clk)
 	begin
 		if (!resetn)
 		begin
-			x_out <= 0;
-			y_out <= 0;
+			x_out <= 1'b0;
+			y_out <= 1'b0;
 		end else begin
-			if (x_out < 0)
-				direction_x <= 0;
-			if (x_out > 160)
-				direction_x <= 1;
-			if (y_out < 0)
-				direction_y <= 0;
-			if (y_out > 120)
-				direction_y <= 1;
+			// CANNOT HAVE NEGATIVE VALUES
+			if (x_out <= 8'd1)
+				direction_x <= 1'b0;
+			if (x_out >= 8'd159)
+				direction_x <= 1'b1;
+			if (y_out <= 7'd1)
+				direction_y <= 1'b0;
+			if (y_out >= 7'd119)
+				direction_y <= 1'b1;
 				
 			case ({direction_x, direction_y})
 				2'b00: begin
@@ -215,7 +215,7 @@ module control(
 
 	custom_clk f_clk (clk, 26'd833_333, frame_clk);
 	
-	custom_clk mv_clk (frame_clk, 26'd5, output_move_clk);
+	custom_clk mv_clk (frame_clk, 26'd1, output_move_clk);
 
 	always@(*)
 	begin: enable_signals
