@@ -270,20 +270,23 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 	reg [7:0] paddle2_x;
 	reg [6:0] paddle2_y;
 
-	reg counter;
+	reg [2:0] counter;
 	reg draw_paddle_counter;
 	
-	/*initial begin
+	initial begin
 		// DEFINE CONSTANTS
 		
-		paddle1_x
-		paddle1_y
+		paddle1_x <= 8'd10;
+		paddle1_y <= 7'd75;
 		
-		paddle2_x
-		paddle2_y
+		paddle2_x <= 8'd140;
+		paddle2_y <= 7'd75;
 		
-	end*/
+	end
 	
+	/*
+	This clock is used to update the positions of the paddles
+	*/
 	// Update x and y values however only at 60hz
 	always@(posedge sixtyhz_clk)
 	begin
@@ -316,6 +319,9 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 		end
 	end
 	
+	/*
+	This clock is used to draw the paddles
+	*/
 	always@(posedge clk)
 	begin
 		// S_DRAW_PADDLES = 3'd4
@@ -326,7 +332,7 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 				y_out <= paddle1_y + counter;
 				if (counter == 3'd6) begin
 					draw_paddle_counter <= 1'b1;
-					counter <= 0;
+					counter <= 3'b0;
 				end else begin
 					counter <= counter + 1'b1;
 				end
@@ -336,7 +342,7 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 				y_out <= paddle2_y + counter;
 			end
 		end else if (state != 3'd4) begin
-			counter <= 1'b0;
+			counter <= 3'b0;
 			draw_paddle_counter <= 1'b0;
 		end
 	end
@@ -344,6 +350,9 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 endmodule
 
 module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
+
+				input [7:0] p1_x, input [6:0] p1_y, // p1 is left paddle
+				input [7:0] p2_x, input [6:0] p2_y, // p2 is right paddle
 
 				output reg [7:0] x_out, output reg [6:0] y_out);
 
@@ -356,16 +365,35 @@ module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			x_out <= 1'b0;
 			y_out <= 1'b0;
 		end else begin
-			// CANNOT HAVE NEGATIVE VALUES
+			/*
+			Ball physics when hitting the boundary
+			*/
+			// x_out, y_out CANNOT HAVE NEGATIVE VALUES
 			if (x_out <= 8'd1)
 				direction_x <= 1'b0;
 			if (x_out >= 8'd159)
 				direction_x <= 1'b1;
-			if (y_out <= 7'd1)
+			if (y_out <= 7'd32)
 				direction_y <= 1'b0;
 			if (y_out >= 7'd119)
 				direction_y <= 1'b1;
 				
+			/*
+			Ball physics when hitting the paddles
+			*/
+			// BALL PHYSICS GO HERE, EITHER CODE UP DIFFERENT MODULE OR CODE IT HERE
+			// Checks if the ball hit the paddle
+			if (x_out <= (p1_x + 1'b1) // Need to play around with the 1'b1, since it is not sequential code
+				&& (y_out >= p1_y && y_out <= p1_y + 3'd7))
+				direction_x <= 1'b0;
+			
+			if (x_out >= (p2_x - 1'b1)
+				&& (y_out >= p2_y && y_out <= p2_y + 3'd7))
+				direction_x <= 1'b1;
+			
+			/*
+			Processing of the next position of the ball
+			*/
 			case ({direction_x, direction_y})
 				2'b00: begin
 					x_out <= x_out + 1'b1;
@@ -400,7 +428,7 @@ module datapath(
 	input resetn
     );
 	 
-	 // I never used this module
+	 // I never used this module, since the modules: "ui, paddles, ball" takes care of datapath
 
 endmodule
 
