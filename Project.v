@@ -108,6 +108,9 @@ module Project
 			.go({SW[16], SW[17]}),
 			.clk(CLOCK_50),
 			.resetn(KEY[0]),
+
+			.paddle_control(!KEY[3]),
+
 			.output_sixtyhz_clk(sixtyhz_clk),
 			
 			.state(state)
@@ -130,11 +133,14 @@ module Project
 			.resetn(resetn),
 			.state(state),
 			
-			.inc_p1_y(/* P1 JOYSTICK INPUT */),
-			.inc_p2_y(/* P2 JOYSTICK INPUT */),
+			.inc_p1_y(KEY[3]),
+			.inc_p2_y(KEY[2]),
 			
+			// Position to draw paddle
 			.x_out(p_x_out),
 			.y_out(p_y_out)
+
+			// Need: Position of top pixel (head) of paddle
 			);
 	
 	wire [7:0] b_x_out;
@@ -145,6 +151,11 @@ module Project
 		.resetn(resetn),
 		.state(state),
 		
+		.p1_x(8'd5),
+		.p1_y(7'd75),
+		.p2_x(8'd155),
+		.p2_y(7'd75),
+
 		.x_out(b_x_out),
 		.y_out(b_y_out)
 		);
@@ -228,7 +239,10 @@ module draw_control_centre(input clk, input [2:0] state,
 			S_ERASE_BALL: begin
 				x_out <= b_x;
 				y_out <= b_y;
-				colour_out <= 3'b000;
+				if (b_x == 80)
+					colour_out <= 3'b111;
+				else
+					colour_out <= 3'b000;
 			end
 		endcase
 	end
@@ -270,16 +284,16 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 	reg [7:0] paddle2_x;
 	reg [6:0] paddle2_y;
 
-	reg [2:0] counter;
+	reg [4:0] counter;
 	reg draw_paddle_counter;
 	
 	initial begin
 		// DEFINE CONSTANTS
 		
-		paddle1_x <= 8'd10;
+		paddle1_x <= 8'd5;
 		paddle1_y <= 7'd75;
 		
-		paddle2_x <= 8'd140;
+		paddle2_x <= 8'd155;
 		paddle2_y <= 7'd75;
 		
 	end
@@ -330,9 +344,9 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			if (draw_paddle_counter == 1'b0) begin
 				x_out <= paddle1_x;
 				y_out <= paddle1_y + counter;
-				if (counter == 3'd6) begin
+				if (counter == 5'd20) begin
 					draw_paddle_counter <= 1'b1;
-					counter <= 3'b0;
+					counter <= 5'b0;
 				end else begin
 					counter <= counter + 1'b1;
 				end
@@ -340,9 +354,11 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			end else if (draw_paddle_counter == 1'b1) begin
 				x_out <= paddle2_x;
 				y_out <= paddle2_y + counter;
+				if (counter < 5'd20)
+					counter <= counter + 1'b1;
 			end
 		end else if (state != 3'd4) begin
-			counter <= 3'b0;
+			counter <= 5'b0;
 			draw_paddle_counter <= 1'b0;
 		end
 	end
@@ -354,21 +370,47 @@ module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 				input [7:0] p1_x, input [6:0] p1_y, // p1 is left paddle
 				input [7:0] p2_x, input [6:0] p2_y, // p2 is right paddle
 
+				// input [7:0] p_x, input [6:0] p_y,
+
 				output reg [7:0] x_out, output reg [6:0] y_out);
 
 	reg direction_x, direction_y;
-	
-	always@(posedge sixtyhz_clk)
-	begin
-		if (!resetn)
-		begin
-			x_out <= 1'b0;
+
+	// Clocks set at different speed to track when to increment (x, y) coordinates depending on trajectory of ball
+    wire clk_22_out, clk_77_out, clk_40_out, clk_69_out, clk_57_out, clk_56_out;
+
+    custom_clk clk_22(1, clk, 26'd2_272_727, clk_22_out);
+    custom_clk clk_77(1, clk, 26'd649_350, clk_77_out);
+    
+    custom_clk clk_40(1, clk, 26'd1_250_000, clk_40_out);
+    custom_clk clk_69(1, clk, 26'd724_637, clk_69_out);
+
+    custom_clk clk_57(1, clk, 26'd877_192, clk_57_out);
+    custom_clk clk_56(1, clk, 26'd892_857, clk_56_out);
+
+    // Pulses to track when to increment counter for (x, y) value of ball
+    reg x_pulse, y_pulse;
+
+    // Random (x, y) direction generated upon reset
+    // wire x_random, y_random;
+    // x_random = {$random} % 1;
+    // y_random = {$random} % 1;
+
+
+    // If ball collides within certain area of paddle, use the corresponding clk for x and y counters
+    always @(posedge sixtyhz_clk)
+    begin
+        if (!resetn)
+        begin
+            x_out <= 1'b0;
 			y_out <= 1'b0;
-		end else begin
-			/*
-			Ball physics when hitting the boundary
-			*/
-			// x_out, y_out CANNOT HAVE NEGATIVE VALUES
+            // Upon reset of game, set angle of trajectory of ball to 45 degrees
+            x_pulse <= clk_57_out;
+            y_pulse <= clk_56_out;
+            direction_x <= 1'b0 /*x_random*/;
+            direction_y <= 1'b0 /*y_random*/;
+        end
+		else begin
 			if (x_out <= 8'd1)
 				direction_x <= 1'b0;
 			if (x_out >= 8'd159)
@@ -377,43 +419,231 @@ module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 				direction_y <= 1'b0;
 			if (y_out >= 7'd119)
 				direction_y <= 1'b1;
+
+            // If the ball has an x-coordinate next to the LEFT paddle
+            if (x_out == p1_x + 8'b1) begin
+
+                // If ball collides with top of paddle (Angle 75)
+                if (y_out == p1_y || y_out == p1_y + 7'd1) begin
+                    x_pulse <= clk_22_out;
+                    y_pulse <= clk_77_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b1;
+                end
+                // Angle 60
+                if (y_out == p1_y + 7'd2 || y_out == p1_y + 7'd3) begin
+                    x_pulse <= clk_40_out;
+                    y_pulse <= clk_69_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b1;
+                end
+                // Angle 45
+                if (y_out == p1_y + 7'd4 || y_out == p1_y + 7'd5) begin
+                    x_pulse <= clk_57_out;
+                    y_pulse <= clk_56_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b1;
+                end
+                // Angle 30
+                if (y_out == p1_y + 7'd6 || y_out == p1_y + 7'd7) begin
+                    x_pulse <= clk_69_out;
+                    y_pulse <= clk_40_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b1;
+                end
+                // Angle 15
+                if (y_out == p1_y + 7'd8 || y_out == p1_y + 7'd9) begin
+                    x_pulse <= clk_77_out;
+                    y_pulse <= clk_22_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b1;
+                end
+                // Angle 15 down
+                if (y_out == p1_y + 7'd10 || y_out == p1_y + 7'd11) begin
+                    x_pulse <= clk_77_out;
+                    y_pulse <= clk_22_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b0;
+                end
+                // Angle 30 down
+                if (y_out == p1_y + 7'd12 || y_out == p1_y + 7'd13) begin
+                    x_pulse <= clk_69_out;
+                    y_pulse <= clk_40_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b0;
+                end
+                // Angle 45 down
+                if (y_out == p1_y + 7'd14 || y_out == p1_y + 7'd15) begin
+                    x_pulse <= clk_57_out;
+                    y_pulse <= clk_56_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b0;
+                end
+                // Angle 60
+                if (y_out == p1_y + 7'd16 || y_out == p1_y + 7'd17) begin
+                    x_pulse <= clk_40_out;
+                    y_pulse <= clk_69_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b0;
+                end
+                // If ball collides with bottom of paddle (Angle 75)
+                if (y_out == p1_y + 7'd18 || y_out == p1_y + 7'd19) begin
+                    x_pulse <= clk_22_out;
+                    y_pulse <= clk_77_out;
+                    direction_x <= 1'b0;
+                    direction_y <= 1'b0;
+                end
+            end
+
+            // If the ball has an x-coordinate next to the RIGHT paddle
+            else if (x_out == p2_x + 8'b1) begin
+                
+                // If ball collides with top of paddle (Angle 75)
+                if (y_out == p2_y || y_out == p2_y + 7'd1) begin
+                    x_pulse <= clk_22_out;
+                    y_pulse <= clk_77_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b1;
+                end
+                // Angle 60
+                if (y_out == p2_y + 7'd2 || y_out == p2_y + 7'd3) begin
+                    x_pulse <= clk_40_out;
+                    y_pulse <= clk_69_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b1;
+                end
+                // Angle 45
+                if (y_out == p2_y + 7'd4 || y_out == p2_y + 7'd5) begin
+                    x_pulse <= clk_57_out;
+                    y_pulse <= clk_56_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b1;
+                end
+                // Angle 30
+                if (y_out == p2_y + 7'd6 || y_out == p2_y + 7'd7) begin
+                    x_pulse <= clk_69_out;
+                    y_pulse <= clk_40_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b1;
+                end
+                // Angle 15
+                if (y_out == p2_y + 7'd8 || y_out == p2_y + 7'd9) begin
+                    x_pulse <= clk_77_out;
+                    y_pulse <= clk_22_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b1;
+                end
+                // Angle 15 down
+                if (y_out == p2_y + 7'd10 || y_out == p2_y + 7'd11) begin
+                    x_pulse <= clk_77_out;
+                    y_pulse <= clk_22_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b0;
+                end
+                // Angle 30 down
+                if (y_out == p2_y + 7'd12 || y_out == p2_y + 7'd13) begin
+                    x_pulse <= clk_69_out;
+                    y_pulse <= clk_40_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b0;
+                end
+                // Angle 45 down
+                if (y_out == p2_y + 7'd14 || y_out == p2_y + 7'd15) begin
+                    x_pulse <= clk_57_out;
+                    y_pulse <= clk_56_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b0;
+                end
+                // Angle 60
+                if (y_out == p2_y + 7'd16 || y_out == p2_y + 7'd17) begin
+                    x_pulse <= clk_40_out;
+                    y_pulse <= clk_69_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b0;
+                end
+                // If ball collides with bottom of paddle (Angle 75)
+                if (y_out == p2_y + 7'd18 || y_out == p2_y + 7'd19) begin
+                    x_pulse <= clk_22_out;
+                    y_pulse <= clk_77_out;
+                    direction_x <= 1'b1;
+                    direction_y <= 1'b0;
+                end
+            end
+			case ({direction_x, direction_y})
+			2'b00: begin
+				x_out <= x_out + 1'b1;
+				y_out <= y_out + 1'b1;
+			end
+			2'b01: begin
+				x_out <= x_out + 1'b1;
+				y_out <= y_out - 1'b1;
+			end
+			2'b10: begin
+				x_out <= x_out - 1'b1;
+				y_out <= y_out + 1'b1;
+			end
+			2'b11: begin
+				x_out <= x_out - 1'b1;
+				y_out <= y_out - 1'b1;
+			end
+			endcase
+        end
+    end
+
+	// always @(posedge sixtyhz_clk)
+	// begin
+	// 	if (!resetn)
+	// 	begin
+	// 		x_out <= 1'b0;
+	// 		y_out <= 1'b0;
+	// 	end else begin
+	// 		/*
+	// 		Ball physics when hitting the boundary
+	// 		*/
+	// 		// x_out, y_out CANNOT HAVE NEGATIVE VALUES
+	// 		if (x_out <= 8'd1)
+	// 			direction_x <= 1'b0;
+	// 		if (x_out >= 8'd159)
+	// 			direction_x <= 1'b1;
+	// 		if (y_out <= 7'd32)
+	// 			direction_y <= 1'b0;
+	// 		if (y_out >= 7'd119)
+	// 			direction_y <= 1'b1;
 				
 			/*
 			Ball physics when hitting the paddles
 			*/
 			// BALL PHYSICS GO HERE, EITHER CODE UP DIFFERENT MODULE OR CODE IT HERE
 			// Checks if the ball hit the paddle
-			if (x_out <= (p1_x + 1'b1) // Need to play around with the 1'b1, since it is not sequential code
-				&& (y_out >= p1_y && y_out <= p1_y + 3'd7))
-				direction_x <= 1'b0;
+			// if (x_out <= (p1_x + 1'b1) // Need to play around with the 1'b1, since it is not sequential code
+			// 	&& (y_out >= p1_y && y_out <= p1_y + 3'd7))
+			// 	direction_x <= 1'b0;
 			
-			if (x_out >= (p2_x - 1'b1)
-				&& (y_out >= p2_y && y_out <= p2_y + 3'd7))
-				direction_x <= 1'b1;
+			// if (x_out >= (p2_x - 1'b1)
+			// 	&& (y_out >= p2_y && y_out <= p2_y + 3'd7))
+			// 	direction_x <= 1'b1;
 			
 			/*
 			Processing of the next position of the ball
 			*/
-			case ({direction_x, direction_y})
-				2'b00: begin
-					x_out <= x_out + 1'b1;
-					y_out <= y_out + 1'b1;
-				end
-				2'b01: begin
-					x_out <= x_out + 1'b1;
-					y_out <= y_out - 1'b1;
-				end
-				2'b10: begin
-					x_out <= x_out - 1'b1;
-					y_out <= y_out + 1'b1;
-				end
-				2'b11: begin
-					x_out <= x_out - 1'b1;
-					y_out <= y_out - 1'b1;
-				end
-			endcase
-		end
-	end
+			// case ({direction_x, direction_y})
+			// 	2'b00: begin
+			// 		x_out <= x_out + 1'b1;
+			// 		y_out <= y_out + 1'b1;
+			// 	end
+			// 	2'b01: begin
+			// 		x_out <= x_out + 1'b1;
+			// 		y_out <= y_out - 1'b1;
+			// 	end
+			// 	2'b10: begin
+			// 		x_out <= x_out - 1'b1;
+			// 		y_out <= y_out + 1'b1;
+			// 	end
+			// 	2'b11: begin
+			// 		x_out <= x_out - 1'b1;
+			// 		y_out <= y_out - 1'b1;
+			// 	end
+			// endcase
 endmodule
 
 module datapath(
@@ -436,7 +666,8 @@ module control(
 	input [1:0] go,
 	input clk,
 	input resetn,
-	
+	input paddle_control,
+
 	// Frame rate clocks
 	output output_sixtyhz_clk,
 	
@@ -463,17 +694,17 @@ module control(
 				S_INIT: next_state = S_DRAW_UI;
 				S_DRAW_UI: next_state = ui_drawn ? S_DRAW_PADDLES : S_DRAW_UI;
 				S_DRAW_PADDLES: next_state = paddles_drawn ? S_ERASE_BALL : S_DRAW_PADDLES;
-				S_DRAW_BALL: next_state = /*USER_INPUT*/1'b0 ? S_ERASE_PADDLES : S_ERASE_BALL;
+				S_ERASE_BALL: next_state = /*USER INPUT*/ 1'b0 ? S_ERASE_PADDLES : S_DRAW_BALL;
 				S_ERASE_PADDLES: next_state = paddles_erased ? S_DRAW_PADDLES : S_ERASE_PADDLES;
-				S_ERASE_BALL: next_state = S_DRAW_BALL;
+				S_DRAW_BALL: next_state = S_ERASE_BALL;
 		   endcase
 	end
 	
-	wire ui_drawn, paddles_drawn, paddles_erased;
+	wire ui_drawn, paddles_drawn, paddles_erased, ui_drawn_2;
 
 	custom_clk ui_clk (current_state == S_DRAW_UI, clk, 26'd250, ui_drawn); // 160x + 90y = 250
-	custom_clk p_clk_1 (current_state == S_DRAW_PADDLES, clk, 26'd14, paddles_drawn); // 7 + 7 = 14
-	custom_clk p_clk_2 (current_state == S_ERASE_PADDLES, clk, 26'd14, paddles_erased); // 7 + 7 = 14, same thing as above
+	custom_clk p_clk_1 (current_state == S_DRAW_PADDLES, clk, 26'd40, paddles_drawn); // 7 + 7 = 14
+	custom_clk p_clk_2 (current_state == S_ERASE_PADDLES, clk, 26'd40, paddles_erased); // 7 + 7 = 14, same thing as above
 	custom_clk f_clk (1, clk, 26'd833_333, output_sixtyhz_clk);
 
 	always@(*)
