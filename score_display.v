@@ -7,11 +7,11 @@ module score_display(
 	// Need 4 bits for each of ones and tens place
 	wire [3:0] i, j, a, b;
 
-	assign i = p1_score % 10;
-	assign j = p1_score / 10;
+	assign a = p1_score % 10;
+	assign b = p1_score / 10;
 
-	assign a = p2_score % 10;
-	assign b = p2_score / 10;
+	assign i = p2_score % 10;
+	assign j = p2_score / 10;
 
 	always @(*)
         case (i)

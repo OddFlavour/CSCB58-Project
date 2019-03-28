@@ -1,6 +1,6 @@
 // Part 2 skeleton
 
-module Project
+module project_1
 	(
 		CLOCK_50,						//	On Board 50 MHz
 		// Your inputs and outputs here
@@ -104,6 +104,7 @@ module Project
     // Instansiate FSM control
     control c0(
 		.clk(half_clk),
+		.sixtyhz_clk(sixtyhz_clk),
 		.resetn(resetn),
 
 		.paddle_control(!SW[3] | !SW[2] | !SW[1] | !SW[0]),
@@ -150,11 +151,16 @@ module Project
 		.inc_p2_y(!SW[1]),
 		.dec_p2_y(!SW[0]),
 		
+		.paddle1_x(p1_x),
+		.paddle1_y(p1_y),
+		
+		.paddle2_x(p2_x),
+		.paddle2_y(p2_y),
 		// Position to draw paddle
 		.x_out(p_x_out),
 		.y_out(p_y_out),
 
-		.LEDR(LEDR)
+		//.LEDR(LEDR)
 
 		// Need: Position of top pixel (head) of paddle
 		);
@@ -164,16 +170,18 @@ module Project
 	wire [6:0] b_y_out;
 	wire [3:0] p1_score;
 	wire [3:0] p2_score;
+	wire [7:0] p1_x, p2_x;
+	wire [6:0] p1_y, p2_y;
 	ball b(
 		.clk(half_clk),
 		.sixtyhz_clk(sixtyhz_clk),
 		.resetn(resetn),
 		.state(state),
 		
-		.p1_x(8'd5),
-		.p1_y(7'd75),
-		.p2_x(8'd155),
-		.p2_y(7'd75),
+		.p1_x(p1_x),
+		.p1_y(p1_y),
+		.p2_x(p2_x),
+		.p2_y(p2_y),
 
 		.force_applied(KEY[1]),
 
@@ -181,7 +189,8 @@ module Project
 		.y_out(b_y_out),
 		
 		.p1_score(p1_score),
-		.p2_score(p2_score)
+		.p2_score(p2_score),
+		.LEDR(LEDR)
 		);
 
 	score_display s_display(
@@ -197,6 +206,7 @@ endmodule
 
 module control(
 	input clk,
+	input sixtyhz_clk,
 	input resetn,
 	input paddle_control,
 	
@@ -223,7 +233,7 @@ module control(
 				S_INIT: next_state = initialized ? S_DRAW_UI : S_INIT;
 				S_DRAW_UI: next_state = ui_drawn ? S_DRAW_PADDLES : S_DRAW_UI;
 				S_DRAW_PADDLES: next_state = paddles_drawn ? S_ERASE_BALL : S_DRAW_PADDLES;
-				S_DRAW_BALL: next_state = S_INIT;
+				S_DRAW_BALL: next_state = sixtyhz_clk? S_INIT : S_DRAW_BALL;
 //				S_DRAW_BALL: begin
 //					if (output_sixtyhz_clk) begin
 //						next_state = paddle_control ? S_ERASE_PADDLES : S_ERASE_BALL;
@@ -239,9 +249,9 @@ module control(
 	
 	wire initialized, ui_drawn, paddles_drawn, paddles_erased;
 
-	custom_clk init_clk (current_state == S_INIT, clk, 26'd14400, initialized);
+	custom_clk init_clk (current_state == S_INIT, clk, 26'd19200, initialized);
 	custom_clk ui_clk (current_state == S_DRAW_UI, clk, 26'd250, ui_drawn); // 160x + 90y = 250
-	custom_clk p_clk_1 (current_state == S_DRAW_PADDLES, clk, 26'd40, paddles_drawn); // 7 + 7 = 14
+	custom_clk p_clk_1 (current_state == S_DRAW_PADDLES, clk, 26'd41, paddles_drawn); // 7 + 7 = 14
 	custom_clk p_clk_2 (current_state == S_ERASE_PADDLES, clk, 26'd40, paddles_erased); // 7 + 7 = 14, same thing as above
 
 	always@(posedge clk)

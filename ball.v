@@ -6,7 +6,8 @@ module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 				input force_applied, // 0 if player is not "hitting" ball, 1 if player is "hitting" ball
 
 				output reg [7:0] x_out, output reg [6:0] y_out,
-				output reg [3:0] p1_score, output reg [3:0] p2_score);
+				output reg [3:0] p1_score, output reg [3:0] p2_score,
+				output reg [17:0] LEDR);
 
 	reg direction_x;
 	reg direction_y;
@@ -112,154 +113,159 @@ module ball(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			Paddle Collision and Ball Direction when Hitting Paddles:
 			*/
 
+			LEDR <= {p1_x, 1'b0, mem_x};
 			// If the ball has an x-coordinate next to the LEFT paddle
-			if (x_out == p1_x + 8'd2)
+			if (mem_x == p1_x + 8'd2)
 			begin
-				// If ball collides with top of paddle (Angle 75)
-				if (y_out == p1_y || y_out == p1_y + 7'd1) begin
-					x_pulse <= clk_22_out;
-					y_pulse <= clk_77_out;
+				if (mem_y >= p1_y && mem_y <= (p1_y + 7'd20))
 					direction_x <= 1'b0;
-					direction_y <= 1'b1;
-				end
-				// Angle 60
-				if (y_out == p1_y + 7'd2 || y_out == p1_y + 7'd3) begin
-					x_pulse <= clk_40_out;
-					y_pulse <= clk_69_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b1;
-				end
-				// Angle 45
-				if (y_out == p1_y + 7'd4 || y_out == p1_y + 7'd5) begin
-					x_pulse <= clk_57_out;
-					y_pulse <= clk_56_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b1;
-				end
-				// Angle 30
-				if (y_out == p1_y + 7'd6 || y_out == p1_y + 7'd7) begin
-					x_pulse <= clk_69_out;
-					y_pulse <= clk_40_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b1;
-				end
-				// Angle 15
-				if (y_out == p1_y + 7'd8 || y_out == p1_y + 7'd9) begin
-					x_pulse <= clk_77_out;
-					y_pulse <= clk_22_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b1;
-				end
-				// Angle 15 down
-				if (y_out == p1_y + 7'd10 || y_out == p1_y + 7'd11) begin
-					x_pulse <= clk_77_out;
-					y_pulse <= clk_22_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b0;
-				end
-				// Angle 30 down
-				if (y_out == p1_y + 7'd12 || y_out == p1_y + 7'd13) begin
-					x_pulse <= clk_69_out;
-					y_pulse <= clk_40_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b0;
-				end
-				// Angle 45 down
-				if (y_out == p1_y + 7'd14 || y_out == p1_y + 7'd15) begin
-					x_pulse <= clk_57_out;
-					y_pulse <= clk_56_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b0;
-				end
-				// Angle 60
-				if (y_out == p1_y + 7'd16 || y_out == p1_y + 7'd17) begin
-					x_pulse <= clk_40_out;
-					y_pulse <= clk_69_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b0;
-				end
-				// If ball collides with bottom of paddle (Angle 75)
-				if (y_out == p1_y + 7'd18 || y_out == p1_y + 7'd19) begin
-					x_pulse <= clk_22_out;
-					y_pulse <= clk_77_out;
-					direction_x <= 1'b0;
-					direction_y <= 1'b0;
-				end
+//				// If ball collides with top of paddle (Angle 75)
+//				if (y_out == p1_y || y_out == p1_y + 7'd1) begin
+//					x_pulse <= clk_22_out;
+//					y_pulse <= clk_77_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 60
+//				if (y_out == p1_y + 7'd2 || y_out == p1_y + 7'd3) begin
+//					x_pulse <= clk_40_out;
+//					y_pulse <= clk_69_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 45
+//				if (y_out == p1_y + 7'd4 || y_out == p1_y + 7'd5) begin
+//					x_pulse <= clk_57_out;
+//					y_pulse <= clk_56_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 30
+//				if (y_out == p1_y + 7'd6 || y_out == p1_y + 7'd7) begin
+//					x_pulse <= clk_69_out;
+//					y_pulse <= clk_40_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 15
+//				if (y_out == p1_y + 7'd8 || y_out == p1_y + 7'd9) begin
+//					x_pulse <= clk_77_out;
+//					y_pulse <= clk_22_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 15 down
+//				if (y_out == p1_y + 7'd10 || y_out == p1_y + 7'd11) begin
+//					x_pulse <= clk_77_out;
+//					y_pulse <= clk_22_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 30 down
+//				if (y_out == p1_y + 7'd12 || y_out == p1_y + 7'd13) begin
+//					x_pulse <= clk_69_out;
+//					y_pulse <= clk_40_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 45 down
+//				if (y_out == p1_y + 7'd14 || y_out == p1_y + 7'd15) begin
+//					x_pulse <= clk_57_out;
+//					y_pulse <= clk_56_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 60
+//				if (y_out == p1_y + 7'd16 || y_out == p1_y + 7'd17) begin
+//					x_pulse <= clk_40_out;
+//					y_pulse <= clk_69_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b0;
+//				end
+//				// If ball collides with bottom of paddle (Angle 75)
+//				if (y_out == p1_y + 7'd18 || y_out == p1_y + 7'd19) begin
+//					x_pulse <= clk_22_out;
+//					y_pulse <= clk_77_out;
+//					direction_x <= 1'b0;
+//					direction_y <= 1'b0;
+//				end
 			end
 
 			// If the ball has an x-coordinate next to the RIGHT paddle
-			else if (x_out == p2_x - 8'd2)
+			else if (mem_x == p2_x - 8'd2)
 			begin
-				// If ball collides with top of paddle (Angle 75)
-				if (y_out == p2_y || y_out == p2_y + 7'd1) begin
-					x_pulse <= clk_22_out;
-					y_pulse <= clk_77_out;
+				if (mem_y >= p2_y && mem_y <= (p2_y + 7'd20))
 					direction_x <= 1'b1;
-					direction_y <= 1'b1;
-				end
-				// Angle 60
-				if (y_out == p2_y + 7'd2 || y_out == p2_y + 7'd3) begin
-					x_pulse <= clk_40_out;
-					y_pulse <= clk_69_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b1;
-				end
-				// Angle 45
-				if (y_out == p2_y + 7'd4 || y_out == p2_y + 7'd5) begin
-					x_pulse <= clk_57_out;
-					y_pulse <= clk_56_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b1;
-				end
-				// Angle 30
-				if (y_out == p2_y + 7'd6 || y_out == p2_y + 7'd7) begin
-					x_pulse <= clk_69_out;
-					y_pulse <= clk_40_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b1;
-				end
-				// Angle 15
-				if (y_out == p2_y + 7'd8 || y_out == p2_y + 7'd9) begin
-					x_pulse <= clk_77_out;
-					y_pulse <= clk_22_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b1;
-				end
-				// Angle 15 down
-				if (y_out == p2_y + 7'd10 || y_out == p2_y + 7'd11) begin
-					x_pulse <= clk_77_out;
-					y_pulse <= clk_22_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b0;
-				end
-				// Angle 30 down
-				if (y_out == p2_y + 7'd12 || y_out == p2_y + 7'd13) begin
-					x_pulse <= clk_69_out;
-					y_pulse <= clk_40_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b0;
-				end
-				// Angle 45 down
-				if (y_out == p2_y + 7'd14 || y_out == p2_y + 7'd15) begin
-					x_pulse <= clk_57_out;
-					y_pulse <= clk_56_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b0;
-				end
-				// Angle 60
-				if (y_out == p2_y + 7'd16 || y_out == p2_y + 7'd17) begin
-					x_pulse <= clk_40_out;
-					y_pulse <= clk_69_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b0;
-				end
-				// If ball collides with bottom of paddle (Angle 75)
-				if (y_out == p2_y + 7'd18 || y_out == p2_y + 7'd19) begin
-					x_pulse <= clk_22_out;
-					y_pulse <= clk_77_out;
-					direction_x <= 1'b1;
-					direction_y <= 1'b0;
-				end
+//				// If ball collides with top of paddle (Angle 75)
+//				if (y_out == p2_y || y_out == p2_y + 7'd1) begin
+//					x_pulse <= clk_22_out;
+//					y_pulse <= clk_77_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 60
+//				if (y_out == p2_y + 7'd2 || y_out == p2_y + 7'd3) begin
+//					x_pulse <= clk_40_out;
+//					y_pulse <= clk_69_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 45
+//				if (y_out == p2_y + 7'd4 || y_out == p2_y + 7'd5) begin
+//					x_pulse <= clk_57_out;
+//					y_pulse <= clk_56_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 30
+//				if (y_out == p2_y + 7'd6 || y_out == p2_y + 7'd7) begin
+//					x_pulse <= clk_69_out;
+//					y_pulse <= clk_40_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 15
+//				if (y_out == p2_y + 7'd8 || y_out == p2_y + 7'd9) begin
+//					x_pulse <= clk_77_out;
+//					y_pulse <= clk_22_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b1;
+//				end
+//				// Angle 15 down
+//				if (y_out == p2_y + 7'd10 || y_out == p2_y + 7'd11) begin
+//					x_pulse <= clk_77_out;
+//					y_pulse <= clk_22_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 30 down
+//				if (y_out == p2_y + 7'd12 || y_out == p2_y + 7'd13) begin
+//					x_pulse <= clk_69_out;
+//					y_pulse <= clk_40_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 45 down
+//				if (y_out == p2_y + 7'd14 || y_out == p2_y + 7'd15) begin
+//					x_pulse <= clk_57_out;
+//					y_pulse <= clk_56_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b0;
+//				end
+//				// Angle 60
+//				if (y_out == p2_y + 7'd16 || y_out == p2_y + 7'd17) begin
+//					x_pulse <= clk_40_out;
+//					y_pulse <= clk_69_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b0;
+//				end
+//				// If ball collides with bottom of paddle (Angle 75)
+//				if (y_out == p2_y + 7'd18 || y_out == p2_y + 7'd19) begin
+//					x_pulse <= clk_22_out;
+//					y_pulse <= clk_77_out;
+//					direction_x <= 1'b1;
+//					direction_y <= 1'b0;
+//				end
 			end
 
 		end

@@ -6,14 +6,20 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 					input inc_p2_y,
 					input dec_p2_y,
 					
-					output reg [7:0] x_out, output reg [6:0] y_out,
-					output reg [17:0] LEDR);
-
-	reg [7:0] paddle1_x;
-	reg [6:0] paddle1_y;
-	
-	reg [7:0] paddle2_x;
-	reg [6:0] paddle2_y;
+					output reg [7:0] paddle1_x,
+					output reg [6:0] paddle1_y,
+		
+					output reg [7:0] paddle2_x,
+					output reg [6:0] paddle2_y,
+					
+					output reg [7:0] x_out, output reg [6:0] y_out
+					);
+//
+//	reg [7:0] paddle1_x;
+//	reg [6:0] paddle1_y;
+//	
+//	reg [7:0] paddle2_x;
+//	reg [6:0] paddle2_y;
 
 	reg [4:0] counter;
 	reg drawn_paddle_1;
@@ -28,7 +34,7 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 		paddle2_y <= 7'd75;
 		
 	end
-
+	
 	/*
 	This clock is used to update the positions of the paddles
 	*/
@@ -44,8 +50,6 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			paddle2_x <= 8'd155;
 			paddle2_y <= 7'd75;
 		end else begin
-
-			LEDR <= {paddle1_y, 1'b0, paddle2_y};
 
 			if (state != 3'd4 && state != 3'd5) begin
 				// 2 bits, 0 = no inc, 1 = +ve inc, 2 = -ve inc
@@ -107,11 +111,11 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 			end else if (drawn_paddle_1 == 1'b1) begin
 				x_out <= paddle2_x;
 				y_out <= paddle2_y + counter;
-				if (counter < 5'd20) begin
-					counter <= counter + 1'b1;
-				end else begin
-					counter <= 5'b0;
+				if (counter == 5'd20) begin
 					drawn_paddle_1 <= 1'b0;
+					counter <= 5'b0;
+				end else begin
+					counter <= counter + 1'b1;
 				end
 			end
 		end

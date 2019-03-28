@@ -5,7 +5,7 @@ module custom_clk(input enable, input default_clk, input [25:0] threshold, outpu
 
 	always@(posedge default_clk)
 	begin
-		if (counter >= threshold) begin
+		if (counter >= (threshold - 1'b1)) begin
 			counter <= 0;
 			pulse <= 1;
 		end else if (enable) begin
