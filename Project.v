@@ -1,6 +1,6 @@
 // Part 2 skeleton
 
-module project_1
+module Project
 	(
 		CLOCK_50,						//	On Board 50 MHz
 		// Your inputs and outputs here
@@ -150,6 +150,10 @@ module project_1
 
 		.inc_p2_y(!SW[1]),
 		.dec_p2_y(!SW[0]),
+		
+		.cpu(SW[17]),
+		.b_x(b_x_out),
+		.b_y(b_y_out),
 		
 		.paddle1_x(p1_x),
 		.paddle1_y(p1_y),

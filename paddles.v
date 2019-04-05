@@ -6,6 +6,10 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 					input inc_p2_y,
 					input dec_p2_y,
 					
+					input cpu,
+					input [7:0] b_x,
+					input [6:0] b_y,
+					
 					output reg [7:0] paddle1_x,
 					output reg [6:0] paddle1_y,
 		
@@ -71,16 +75,28 @@ module paddles(input clk, input sixtyhz_clk, input resetn, input [2:0] state,
 					end
 				end
 
-				// PADDLE 2 CONTROL:
-				if (inc_p2_y == 1'd1) begin
-					// Edge detection - bottom edge
-					if ((paddle2_y + 7'd20) < 7'd119) begin
-						paddle2_y <= paddle2_y + 1'b1;
+				if (!cpu) begin
+					// PADDLE 2 CONTROL:
+					if (inc_p2_y == 1'd1) begin
+						// Edge detection - bottom edge
+						if ((paddle2_y + 7'd20) < 7'd119) begin
+							paddle2_y <= paddle2_y + 1'b1;
+						end
+					end else if (dec_p2_y == 1'd1) begin
+						// Edge detection - top edge
+						if (paddle2_y > 7'd31) begin
+							paddle2_y <= paddle2_y - 1'b1;
+						end
 					end
-				end else if (dec_p2_y == 1'd1) begin
-					// Edge detection - top edge
-					if (paddle2_y > 7'd31) begin
-						paddle2_y <= paddle2_y - 1'b1;
+				end else begin
+					if (b_y < (paddle2_y + 7'd10)) begin
+						if (paddle2_y > 7'd31) begin
+							paddle2_y <= paddle2_y - 1'b1;
+						end
+					end else if (b_y > (paddle2_y + 7'd10)) begin
+						if ((paddle2_y + 7'd20) < 7'd119) begin
+							paddle2_y <= paddle2_y + 1'b1;
+						end
 					end
 				end
 			end
